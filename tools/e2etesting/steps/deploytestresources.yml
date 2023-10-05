@@ -46,7 +46,8 @@ steps:
   condition: ne(variables['NestedEdgeFlag'], 'Enable')
   inputs:
     azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'latestVersion'
+    azurePowerShellVersion: 'OtherVersion'
+    preferredAzurePowerShellVersion: '10.3.0'
     scriptType: filePath
     scriptPath: '$(BasePath)\DeployEdge.ps1'
     scriptArguments: >
@@ -58,7 +59,8 @@ steps:
   timeoutInMinutes: 90
   inputs:
     azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'latestVersion'
+    azurePowerShellVersion: 'OtherVersion'
+    preferredAzurePowerShellVersion: '10.3.0'
     scriptType: filePath
     scriptPath: '$(BasePath)\DeployTestEventProcessor.ps1'
     scriptArguments: >

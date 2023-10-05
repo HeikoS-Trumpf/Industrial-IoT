@@ -4,16 +4,6 @@ parameters:
 
 steps:
 - task: AzurePowerShell@5
-  displayName: "Install latest AZ module"
-  timeoutInMinutes: 15
-  inputs:
-    azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'latestVersion'
-    scriptType: 'InlineScript'
-    Inline: |
-      Install-Module -Name Az -MinimumVersion 10.3.0 -AllowClobber -Force
-
-- task: AzurePowerShell@5
   displayName: "Delete Resource Group"
   inputs:
     azureSubscription: '$(AzureSubscription)'
