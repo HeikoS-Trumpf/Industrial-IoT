@@ -12,6 +12,15 @@ steps:
       Write-Host "##vso[task.setvariable variable=ServicePrincipalId]$($env:servicePrincipalId)"
 
 - task: AzurePowerShell@5
+  displayName: "Install latest AZ module"
+  timeoutInMinutes: 15
+  inputs:
+    azurePowerShellVersion: 'latestVersion'
+    scriptType: 'InlineScript'
+    Inline: |
+      Install-Module -Name Az -MinimumVersion 10.3.0 -AllowClobber -Force
+
+- task: AzurePowerShell@5
   displayName: 'Auto-Set Variables'
   inputs:
     azureSubscription: '$(AzureSubscription)'

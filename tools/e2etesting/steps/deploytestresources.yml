@@ -4,6 +4,15 @@ steps:
     artifact: 'testartifacts'
     path: $(BasePath)
 
+- task: AzurePowerShell@5
+  displayName: "Install latest AZ module"
+  timeoutInMinutes: 15
+  inputs:
+    azurePowerShellVersion: 'latestVersion'
+    scriptType: 'InlineScript'
+    Inline: |
+      Install-Module -Name Az -MinimumVersion 10.3.0 -AllowClobber -Force
+
 - task: AzureCLI@2
   displayName: "Deploy containers with simulated PLCs with public ips"
   timeoutInMinutes: 90
