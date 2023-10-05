@@ -11,6 +11,7 @@ steps:
   displayName: "Install latest AZ module"
   timeoutInMinutes: 15
   inputs:
+    azureSubscription: '$(AzureSubscription)'
     azurePowerShellVersion: 'latestVersion'
     scriptType: 'InlineScript'
     Inline: |
