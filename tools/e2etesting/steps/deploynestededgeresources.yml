@@ -4,16 +4,6 @@ steps:
     artifact: 'testartifacts'
     path: $(BasePath)
 
-- task: AzurePowerShell@5
-  displayName: "Install latest AZ module"
-  timeoutInMinutes: 15
-  inputs:
-    azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'latestVersion'
-    scriptType: 'InlineScript'
-    Inline: |
-      Install-Module -Name Az -MinimumVersion 10.3.0 -AllowClobber -Force
-
 - task: AzureCLI@2
   displayName: "Set permissions for scripts"
   inputs:
@@ -21,22 +11,21 @@ steps:
     scriptType: 'bash'
     scriptLocation: 'inlineScript'
     workingDirectory: '$(System.DefaultWorkingDirectory)/tools/e2etesting/NestedEdge'
-    inlineScript: |
+    inlineScript: | 
       find  -name '*.sh' -print0 | xargs -0 chmod +x
-
+      
 - task: AzurePowerShell@5
   displayName: "Prepare for nested edge deployment"
   timeoutInMinutes: 30
   inputs:
     azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'OtherVersion'
-    preferredAzurePowerShellVersion: '10.3.0'
+    azurePowerShellVersion: 'latestVersion'
     scriptType: filePath
     scriptPath: '$(System.DefaultWorkingDirectory)/tools/e2etesting/NestedEdge/PreNestedEdgeDeployment.ps1'
     scriptArguments: >
       -ResourceGroupName "$(ResourceGroupName)"
       -KeysPath "$(System.DefaultWorkingDirectory)"
-
+      
 - task: AzureCLI@2
   displayName: "Deploy nested edge"
   inputs:
@@ -52,8 +41,7 @@ steps:
   timeoutInMinutes: 30
   inputs:
     azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'OtherVersion'
-    preferredAzurePowerShellVersion: '10.3.0'
+    azurePowerShellVersion: 'latestVersion'
     scriptType: filePath
     scriptPath: '$(System.DefaultWorkingDirectory)/tools/e2etesting/NestedEdge/PostNestedEdgeDeployment.ps1'
     scriptArguments: >

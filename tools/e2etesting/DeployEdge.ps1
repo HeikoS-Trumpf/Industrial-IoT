@@ -11,6 +11,9 @@ Param(
     $KeysPath
 )
 
+Install-Module -Name Az -MinimumVersion 10.3.0 -AllowClobber -Force
+Import-Module Az -RequiredVersion 10.3.0
+
 # Stop execution when an error occurs.
 $ErrorActionPreference = "Stop"
 

@@ -4,16 +4,6 @@ steps:
     artifact: 'testartifacts'
     path: $(BasePath)
 
-- task: AzurePowerShell@5
-  displayName: "Install latest AZ module"
-  timeoutInMinutes: 15
-  inputs:
-    azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'latestVersion'
-    scriptType: 'InlineScript'
-    Inline: |
-      Install-Module -Name Az -MinimumVersion 10.3.0 -AllowClobber -Force
-
 - task: AzureCLI@2
   displayName: "Deploy containers with simulated PLCs with public ips"
   timeoutInMinutes: 90
@@ -46,8 +36,7 @@ steps:
   condition: ne(variables['NestedEdgeFlag'], 'Enable')
   inputs:
     azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'OtherVersion'
-    preferredAzurePowerShellVersion: '10.3.0'
+    azurePowerShellVersion: 'latestVersion'
     scriptType: filePath
     scriptPath: '$(BasePath)\DeployEdge.ps1'
     scriptArguments: >
@@ -59,8 +48,7 @@ steps:
   timeoutInMinutes: 90
   inputs:
     azureSubscription: '$(AzureSubscription)'
-    azurePowerShellVersion: 'OtherVersion'
-    preferredAzurePowerShellVersion: '10.3.0'
+    azurePowerShellVersion: 'latestVersion'
     scriptType: filePath
     scriptPath: '$(BasePath)\DeployTestEventProcessor.ps1'
     scriptArguments: >
