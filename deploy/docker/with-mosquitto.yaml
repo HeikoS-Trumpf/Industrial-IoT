@@ -5,7 +5,7 @@ services:
   ############################
   publisher:
     environment: 
-      MqttClientConnectionString: "HostName=mosquitto;Port=1883;UseTls=false;Protocol=v5"
+      MqttClientConnectionString: "HostName=mosquitto;Port=1884;UseTls=false;Protocol=v5"
       TelemetryTopicTemplate: "{RootTopic}/{Site}/{DataSetWriterGroup}"
       DataSetMetaDataTopicTemplate: "{TelemetryTopic}/{DataSetWriterName}/metadata"
       PublisherId: Microsoft
@@ -20,7 +20,7 @@ services:
     image: "eclipse-mosquitto:latest"
     restart: unless-stopped
     ports:
-      - "1883:1883"
+      - "1884:1884"
     volumes:
       - mosquitto:/mosquitto/data
       - "./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf"
@@ -49,7 +49,7 @@ services:
       USE_MQTT: 1
       CLIENT_NAME: "dashboard"
       BROKER_NAME: "mosquitto"
-      BROKER_PORT: "1883"
+      BROKER_PORT: "1884"
       TOPIC: Microsoft/factory1/#
     depends_on:
       - mosquitto

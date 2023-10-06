@@ -19,7 +19,7 @@
       ],
       "type": "mqtt",
       "host": "mosquitto",
-      "port": 1883,
+      "port": 1884,
       "protocol": "mqtt"
     }
   }
