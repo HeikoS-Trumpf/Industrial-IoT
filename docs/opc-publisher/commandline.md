@@ -140,6 +140,13 @@ Messaging configuration
                                if possible.
                                Default: `256k` in case of IoT Hub messages, `0`
                                otherwise.
+      --qos, --DefaultQualityOfService=VALUE
+                             The default quality of service to use for messages
+                               Allowed values:
+                                   `AtMostOnce`
+                                   `AtLeastOnce`
+                                   `ExactlyOnce`
+                               Default: `AtLeastOnce`.
       --mts, --messagetimestamp, --MessageTimestamp=VALUE
                              The value to set as as the timestamp property of
                                messages during encoding (if the encoding

@@ -8,6 +8,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Runtime
     using Azure.IIoT.OpcUa.Publisher.Models;
     using Azure.IIoT.OpcUa.Publisher.Stack.Runtime;
     using Furly.Azure.IoT.Edge;
+    using Furly.Extensions.Messaging;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using Mono.Options;
@@ -117,9 +118,12 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Runtime
                 { $"bs|batchsize=|{PublisherConfig.BatchSizeKey}=",
                     "The number of incoming OPC UA subscription notifications to collect until sending a network messages. When `--bs` is set to 1 and `--bi` is 0 batching is disabled and messages are sent as soon as notifications arrive.\nDefault: `50`.\n",
                     (int i) => this[PublisherConfig.BatchSizeKey] = i.ToString(CultureInfo.CurrentCulture) },
-                { $"ms|maxmessagesize=|iothubmessagesize=|{PublisherConfig.IoTHubMaxMessageSize}=",
+                { $"ms|maxmessagesize=|iothubmessagesize=|{PublisherConfig.IoTHubMaxMessageSizeKey}=",
                     "The maximum size of the messages to emit. In case the encoder cannot encode a message because the size would be exceeded, the message is dropped. Otherwise the encoder will aim to chunk messages if possible. \nDefault: `256k` in case of IoT Hub messages, `0` otherwise.\n",
-                    (int i) => this[PublisherConfig.IoTHubMaxMessageSize] = i.ToString(CultureInfo.CurrentCulture) },
+                    (int i) => this[PublisherConfig.IoTHubMaxMessageSizeKey] = i.ToString(CultureInfo.CurrentCulture) },
+                { $"qos|{PublisherConfig.DefaultQualityOfServiceKey}=",
+                    $"The default quality of service to use for messages\nAllowed values:\n    `{string.Join("`\n    `", Enum.GetNames(typeof(QoS)))}`\nDefault: `{nameof(QoS.AtLeastOnce)}`.\n",
+                    (QoS q) => this[PublisherConfig.DefaultQualityOfServiceKey] = q.ToString() },
 
                 // TODO: Add ConfiguredMessageSize
 
