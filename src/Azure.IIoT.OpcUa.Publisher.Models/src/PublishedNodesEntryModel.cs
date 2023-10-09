@@ -232,7 +232,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Models
         /// <summary>
         /// The quality of service to use
         /// </summary>
-        [DataMember(Name = "WriterGroupQoS", Order = 26,
+        [DataMember(Name = "WriterGroupQualityOfService", Order = 28,
             EmitDefaultValue = false)]
         public QoS? WriterGroupQualityOfService { get; set; }
 
