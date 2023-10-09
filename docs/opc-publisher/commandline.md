@@ -141,7 +141,10 @@ Messaging configuration
                                Default: `256k` in case of IoT Hub messages, `0`
                                otherwise.
       --qos, --DefaultQualityOfService=VALUE
-                             The default quality of service to use for messages
+                             The default quality of service to use for data set
+                               messages.
+                               This does not apply to metadata messages which
+                               are always sent with `AtLeastOnce` semantics.
                                Allowed values:
                                    `AtMostOnce`
                                    `AtLeastOnce`
@@ -718,10 +721,12 @@ OPC UA Client configuration
                                    `X509Store`
                                Default: `Directory`.
       --up, --usercertstorepath, --TrustedUserCertificatesPath=VALUE
-                             The path of the cert store for user certificates.
+                             The path of the certificate store for user
+                               certificates.
                                Default: $"{PkiRootPath}/users".
       --upt, --TrustedUserCertificatesType=VALUE
-                             Store type of the User certificate store.
+                             Type of certificate store for all User
+                               certificates.
                                Allowed values:
                                    `Directory`
                                    `X509Store`
@@ -730,8 +735,8 @@ OPC UA Client configuration
                              The path of the user issuer cert store.
                                Default: $"{PkiRootPath}/users/issuer".
       --uit, --UserIssuerCertificatesType=VALUE
-                             Type of the User certificate issuer certificates
-                               store.
+                             Type of the issuer certificate store for User
+                               certificates.
                                Allowed values:
                                    `Directory`
                                    `X509Store`
