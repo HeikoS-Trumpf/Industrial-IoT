@@ -8,6 +8,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Runtime
     using Azure.IIoT.OpcUa.Publisher.Models;
     using Azure.IIoT.OpcUa.Publisher.Stack.Runtime;
     using Furly.Azure.IoT.Edge;
+    using Furly.Extensions.Messaging;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.Logging;
     using Mono.Options;
@@ -117,9 +118,12 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Runtime
                 { $"bs|batchsize=|{PublisherConfig.BatchSizeKey}=",
                     "The number of incoming OPC UA subscription notifications to collect until sending a network messages. When `--bs` is set to 1 and `--bi` is 0 batching is disabled and messages are sent as soon as notifications arrive.\nDefault: `50`.\n",
                     (int i) => this[PublisherConfig.BatchSizeKey] = i.ToString(CultureInfo.CurrentCulture) },
-                { $"ms|maxmessagesize=|iothubmessagesize=|{PublisherConfig.IoTHubMaxMessageSize}=",
+                { $"ms|maxmessagesize=|iothubmessagesize=|{PublisherConfig.IoTHubMaxMessageSizeKey}=",
                     "The maximum size of the messages to emit. In case the encoder cannot encode a message because the size would be exceeded, the message is dropped. Otherwise the encoder will aim to chunk messages if possible. \nDefault: `256k` in case of IoT Hub messages, `0` otherwise.\n",
-                    (int i) => this[PublisherConfig.IoTHubMaxMessageSize] = i.ToString(CultureInfo.CurrentCulture) },
+                    (int i) => this[PublisherConfig.IoTHubMaxMessageSizeKey] = i.ToString(CultureInfo.CurrentCulture) },
+                { $"qos|{PublisherConfig.DefaultQualityOfServiceKey}=",
+                    $"The default quality of service to use for data set messages.\nThis does not apply to metadata messages which are always sent with `AtLeastOnce` semantics.\nAllowed values:\n    `{string.Join("`\n    `", Enum.GetNames(typeof(QoS)))}`\nDefault: `{nameof(QoS.AtLeastOnce)}`.\n",
+                    (QoS q) => this[PublisherConfig.DefaultQualityOfServiceKey] = q.ToString() },
 
                 // TODO: Add ConfiguredMessageSize
 
@@ -376,6 +380,9 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Runtime
                 { $"apt|at=|appcertstoretype=|{OpcUaClientConfig.ApplicationCertificateStoreTypeKey}=",
                     $"The own application cert store type.\nAllowed values:\n    `{CertificateStoreType.Directory}`\n    `{CertificateStoreType.X509Store}`\nDefault: `{CertificateStoreType.Directory}`.\n",
                     s => SetStoreType(s, OpcUaClientConfig.ApplicationCertificateStoreTypeKey, "apt") },
+                { $"apw|appcertstorepwd=|{OpcUaClientConfig.ApplicationCertificatePasswordKey}=",
+                    "Password to use when storing the application certificate in the store folder if the store is of type `Directory`.\nDefault: empty, which means application certificate is not protected by default.\n",
+                    s => this[OpcUaClientConfig.ApplicationCertificatePasswordKey] = s },
                 { $"tp|trustedcertstorepath=|{OpcUaClientConfig.TrustedPeerCertificatesPathKey}=",
                     "The path of the trusted cert store.\nDefault: $\"{{PkiRootPath}}/trusted\".\n",
                     s => this[OpcUaClientConfig.TrustedPeerCertificatesPathKey] = s },
@@ -389,14 +396,23 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Runtime
                     $"Rejected certificate store type.\nAllowed values:\n    `{CertificateStoreType.Directory}`\n    `{CertificateStoreType.X509Store}`\nDefault: `{CertificateStoreType.Directory}`.\n",
                     s => SetStoreType(s, OpcUaClientConfig.RejectedCertificateStoreTypeKey, "rpt") },
                 { $"ip|issuercertstorepath=|{OpcUaClientConfig.TrustedIssuerCertificatesPathKey}=",
-                    "The path of the trusted issuer cert store.\nDefault: $\"{{PkiRootPath}}/issuers\".\n",
+                    "The path of the trusted issuer cert store.\nDefault: $\"{{PkiRootPath}}/issuer\".\n",
                     s => this[OpcUaClientConfig.TrustedIssuerCertificatesPathKey] = s },
                 { $"ipt|{OpcUaClientConfig.TrustedIssuerCertificatesTypeKey}=",
-                    $"Trusted issuer certificate store types.\nAllowed values:\n    `{CertificateStoreType.Directory}`\n    `{CertificateStoreType.X509Store}`\nDefault: `{CertificateStoreType.Directory}`.\n",
+                    $"Trusted issuer certificate store type.\nAllowed values:\n    `{CertificateStoreType.Directory}`\n    `{CertificateStoreType.X509Store}`\nDefault: `{CertificateStoreType.Directory}`.\n",
                     s => SetStoreType(s, OpcUaClientConfig.TrustedIssuerCertificatesTypeKey, "ipt") },
-                { $"cpw|certificatestorepwd=|{OpcUaClientConfig.CertificateStorePasswordKey}=",
-                    "Password to use when storing keys in the certificate store.\nDefault: empty, which means stores are not protected by default.\n",
-                    s => SetStoreType(s, OpcUaClientConfig.CertificateStorePasswordKey, "ipt") },
+                { $"up|usercertstorepath=|{OpcUaClientConfig.TrustedUserCertificatesPathKey}=",
+                    "The path of the certificate store for user certificates.\nDefault: $\"{{PkiRootPath}}/users\".\n",
+                    s => this[OpcUaClientConfig.TrustedUserCertificatesPathKey] = s },
+                { $"upt|{OpcUaClientConfig.TrustedUserCertificatesTypeKey}=",
+                    $"Type of certificate store for all User certificates.\nAllowed values:\n    `{CertificateStoreType.Directory}`\n    `{CertificateStoreType.X509Store}`\nDefault: `{CertificateStoreType.Directory}`.\n",
+                    s => SetStoreType(s, OpcUaClientConfig.TrustedUserCertificatesTypeKey, "upt") },
+                { $"uip|userissuercertstorepath=|{OpcUaClientConfig.UserIssuerCertificatesPathKey}=",
+                    "The path of the user issuer cert store.\nDefault: $\"{{PkiRootPath}}/users/issuer\".\n",
+                    s => this[OpcUaClientConfig.UserIssuerCertificatesPathKey] = s },
+                { $"uit|{OpcUaClientConfig.UserIssuerCertificatesTypeKey}=",
+                    $"Type of the issuer certificate store for User certificates.\nAllowed values:\n    `{CertificateStoreType.Directory}`\n    `{CertificateStoreType.X509Store}`\nDefault: `{CertificateStoreType.Directory}`.\n",
+                    s => SetStoreType(s, OpcUaClientConfig.UserIssuerCertificatesTypeKey, "uip") },
 
                 "",
                 "Diagnostic options",

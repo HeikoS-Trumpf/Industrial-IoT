@@ -10,19 +10,23 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit" Version="2.5.1" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.1">
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Furly.Extensions.Json" Version="0.4.60" />
-    <PackageReference Include="Furly.Extensions.MessagePack" Version="0.4.60" />
-    <PackageReference Include="Furly.Extensions.Newtonsoft" Version="0.4.60" />
+    <PackageReference Include="Furly.Extensions.Json" Version="0.4.61" />
+    <PackageReference Include="Furly.Extensions.MessagePack" Version="0.4.61" />
+    <PackageReference Include="Furly.Extensions.Newtonsoft" Version="0.4.61" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\Azure.IIoT.OpcUa.Publisher.Models.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82a7f48d-3b50-4b1e-b82e-3ada8210c358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="Roslynator.Analyzers" Version="4.6.1" />
+    <PackageReference Update="Roslynator.Formatting.Analyzers" Version="4.6.1" />
   </ItemGroup>
 </Project>

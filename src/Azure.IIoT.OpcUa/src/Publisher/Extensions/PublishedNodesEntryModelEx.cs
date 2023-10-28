@@ -6,6 +6,7 @@
 namespace Azure.IIoT.OpcUa.Publisher.Config.Models
 {
     using Azure.IIoT.OpcUa.Publisher.Models;
+    using Furly.Extensions.Messaging;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
@@ -59,9 +60,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Config.Models
                 UseSecurity = model.Endpoint?.SecurityMode != SecurityMode.None,
                 EndpointSecurityMode = model.Endpoint?.SecurityMode,
                 EndpointSecurityPolicy = model.Endpoint?.SecurityPolicy,
-                OpcAuthenticationMode = (model.User?.Type ?? CredentialType.None)
-                    == CredentialType.None ?
-                        OpcAuthenticationMode.Anonymous : OpcAuthenticationMode.UsernamePassword,
+                OpcAuthenticationMode = ToAuthenticationModel(model.User?.Type),
                 OpcAuthenticationPassword = model.User.GetPassword(),
                 OpcAuthenticationUsername = model.User.GetUserName(),
                 DataSetWriterGroup = model.Group,
@@ -70,6 +69,24 @@ namespace Azure.IIoT.OpcUa.Publisher.Config.Models
                 MessagingMode = MessagingMode.FullSamples,
                 OpcNodes = new List<OpcNodeModel>()
             };
+        }
+
+        /// <summary>
+        /// Convert to mode
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        internal static OpcAuthenticationMode ToAuthenticationModel(this CredentialType? type)
+        {
+            switch (type)
+            {
+                case CredentialType.UserName:
+                    return OpcAuthenticationMode.UsernamePassword;
+                case CredentialType.X509Certificate:
+                    return OpcAuthenticationMode.Certificate;
+                default:
+                    return OpcAuthenticationMode.Anonymous;
+            }
         }
 
         /// <summary>
@@ -211,6 +228,10 @@ namespace Azure.IIoT.OpcUa.Publisher.Config.Models
                 return false;
             }
             if (model.WriterGroupTransport != that.WriterGroupTransport)
+            {
+                return false;
+            }
+            if (model.WriterGroupQualityOfService != that.WriterGroupQualityOfService)
             {
                 return false;
             }
