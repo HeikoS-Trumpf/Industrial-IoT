@@ -7,7 +7,9 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
 {
     using Azure.IIoT.OpcUa.Publisher.Module.Tests.Fixtures;
     using Azure.IIoT.OpcUa.Publisher.Testing.Fixtures;
+    using FluentAssertions;
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Text.Json;
     using System.Threading.Tasks;
@@ -47,7 +49,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
             // Act
             var (metadata, messages) = await ProcessMessagesAndMetadataAsync(
                 nameof(CanSendDataItemToIoTHubTest), "./Resources/DataItems.json",
-                messageType: "ua-data", arguments: new string[] { "--mm=PubSub" });
+                messageType: "ua-data", arguments: new string[] { "--mm=PubSub", "--dm=false" });
 
             // Assert
             var message = Assert.Single(messages).Message;
@@ -122,7 +124,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
             var (metadata, result) = await ProcessMessagesAndMetadataAsync(
                 nameof(CanEncodeWithoutReversibleEncodingTest),
                 publishedNodesFile, messageType: "ua-data",
-                arguments: new[] { "--mm=PubSub", "--me=Json" }
+                arguments: new[] { "--mm=PubSub", "--me=Json", "--dm=false" }
             );
 
             Assert.Single(result);
@@ -162,7 +164,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
             var (metadata, result) = await ProcessMessagesAndMetadataAsync(
                 nameof(CanEncodeWithReversibleEncodingTest),
                 publishedNodesFile, TimeSpan.FromMinutes(2), 4, messageType: "ua-data",
-                arguments: new[] { "--mm=PubSub", "--me=JsonReversible" }
+                arguments: new[] { "--mm=PubSub", "--me=JsonReversible", "--dm=false" }
             );
 
             var messages = result
@@ -282,6 +284,66 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
             AssertCompliantSimpleEventsMetadata(metadata);
         }
 
+        [Theory]
+        [InlineData("./Resources/SimpleEvents2.json")]
+        public async Task CanEncode2EventsWithCompliantEncodingTestTest(string publishedNodesFile)
+        {
+            var dataSetWriterNames = new HashSet<string>();
+
+            // Arrange
+            // Act
+            var (metadata, result) = await ProcessMessagesAndMetadataAsync(
+                nameof(CanEncode2EventsWithCompliantEncodingTestTest),
+                publishedNodesFile, GetBothEvents, messageType: "ua-data",
+                arguments: new[] { "-c", "--mm=PubSub", "--me=Json" });
+
+            Assert.Single(result);
+
+            var messages = result
+                .SelectMany(x => x.Message.GetProperty("Messages").EnumerateArray())
+                .ToArray();
+
+            dataSetWriterNames.Select(d => d.Split('|')[1])
+                .Should().Contain(new[] { "CycleStarted", "Alarm" });
+
+            // Assert
+            Assert.NotEmpty(messages);
+            Assert.All(messages, m =>
+            {
+                var value = m.GetProperty("Payload");
+
+                // Variant encoding is the default
+                var eventId = value.GetProperty(kEventId).GetProperty("Value");
+                var message = value.GetProperty(kMessage).GetProperty("Value");
+                var cycleId = value.GetProperty(kCycleId).GetProperty("Value");
+                var currentStep = value.GetProperty(kCurrentStep).GetProperty("Value");
+
+                Assert.Equal(JsonValueKind.String, eventId.ValueKind);
+                Assert.Equal(JsonValueKind.String, message.ValueKind);
+                Assert.Equal(JsonValueKind.String, cycleId.ValueKind);
+                Assert.Equal(JsonValueKind.String, currentStep.GetProperty("Name").ValueKind);
+                Assert.Equal(JsonValueKind.Number, currentStep.GetProperty("Duration").ValueKind);
+            });
+
+            JsonElement GetBothEvents(JsonElement jsonElement)
+            {
+                var messages = jsonElement.GetProperty("Messages");
+                if (messages.ValueKind != JsonValueKind.Array)
+                {
+                    return default;
+                }
+                foreach (var element in messages.EnumerateArray())
+                {
+                    var dataSetWriterName = element.GetProperty("DataSetWriterName").GetString();
+                    if (dataSetWriterName != null)
+                    {
+                        dataSetWriterNames.Add(dataSetWriterName);
+                    }
+                }
+                return dataSetWriterNames.Count == 2 ? jsonElement : default;
+            }
+        }
+
         [Fact]
         public async Task CanSendPendingConditionsToIoTHubTest()
         {
@@ -289,7 +351,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
             // Act
             var (metadata, messages) = await ProcessMessagesAndMetadataAsync(
                 nameof(CanSendPendingConditionsToIoTHubTest), "./Resources/PendingAlarms.json", GetAlarmCondition,
-                messageType: "ua-data", arguments: new string[] { "--mm=PubSub" });
+                messageType: "ua-data", arguments: new string[] { "--mm=PubSub", "--dm=False" });
 
             // Assert
             _output.WriteLine(messages.ToString());
@@ -308,7 +370,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
             // Act
             var (metadata, messages) = await ProcessMessagesAndMetadataAsync(
                 nameof(CanSendDataItemToIoTHubTest), "./Resources/KeyFrames.json",
-                messageType: "ua-data");
+                messageType: "ua-data", arguments: new string[] { "--mm=FullNetworkMessages", "--dm=false" });
 
             // Assert
             var message = Assert.Single(messages).Message;
@@ -335,13 +397,47 @@ namespace Azure.IIoT.OpcUa.Publisher.Module.Tests.Sdk.ReferenceServer
         }
 
         [Fact]
+        public async Task CanSendKeyFramesWithExtensionFieldsToIoTHubTestJsonReversible()
+        {
+            // Arrange
+            // Act
+            var (metadata, messages) = await ProcessMessagesAndMetadataAsync(
+                nameof(CanSendDataItemToIoTHubTest), "./Resources/KeyFrames.json",
+                messageType: "ua-data", arguments: new string[] { "--mm=FullNetworkMessages", "--me=JsonReversible", "--fm=true", "--strict" });
+
+            // Assert
+            var message = Assert.Single(messages).Message;
+            var firstDataSet = message.GetProperty("Messages")[0];
+            Assert.Equal("ua-keyframe", firstDataSet.GetProperty("MessageType").GetString());
+            var payload = firstDataSet.GetProperty("Payload");
+            Assert.NotEqual(JsonValueKind.Null, payload.ValueKind);
+
+            var time = payload.GetProperty("CurrentTime").GetProperty("Value");
+            Assert.NotEqual(JsonValueKind.Null, time.ValueKind);
+            Assert.True(time.GetProperty("Body").GetDateTime() < DateTime.UtcNow);
+            Assert.False(payload.GetProperty("Important").GetProperty("Value").GetProperty("Body").GetBoolean());
+            Assert.Equal("5", payload.GetProperty("AssetId").GetProperty("Value").GetProperty("Body").GetString());
+            Assert.Equal("mm/sec", payload.GetProperty("EngineeringUnits").GetProperty("Value").GetProperty("Body").GetString());
+            Assert.Equal(12.3465, payload.GetProperty("Variance").GetProperty("Value").GetProperty("Body").GetDouble());
+
+            var fields = metadata.Value.Message.GetProperty("MetaData").GetProperty("Fields");
+            Assert.Equal(JsonValueKind.Array, fields.ValueKind);
+            Assert.NotNull(metadata);
+            var fieldNames = fields.EnumerateArray().Select(v => v.GetProperty("Name").GetString());
+            Assert.True(fieldNames.ToHashSet().SetEquals(
+                new[] { "AssetId", "CurrentTime", "EngineeringUnits", "Important", "Variance" }));
+            Assert.Equal(fieldNames, payload.EnumerateObject().Select(p => p.Name));
+            Assert.NotNull(metadata);
+        }
+
+        [Fact]
         public async Task CanSendKeyFramesToIoTHubTest()
         {
             // Arrange
             // Act
             var (metadata, messages) = await ProcessMessagesAndMetadataAsync(
                 nameof(CanSendDataItemToIoTHubTest), "./Resources/KeyFrames.json", TimeSpan.FromMinutes(2), 11,
-                messageType: "ua-data");
+                messageType: "ua-data", arguments: new[] {  "--dm=false" });
 
             // Assert
             var allDataSetMessages = messages.Select(m => m.Message.GetProperty("Messages")).SelectMany(m => m.EnumerateArray());

@@ -86,7 +86,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                 }
 
                 var networkMessages = GetNetworkMessages(notifications, asBatch);
-                foreach (var (notificationsPerMessage, networkMessage, topic, retain, ttl, onSent) in networkMessages)
+                foreach (var (notificationsPerMessage, networkMessage, topic, retain, ttl, qos, onSent) in networkMessages)
                 {
                     var chunks = networkMessage.Encode(encodingContext, maxMessageSize);
                     var notificationsPerChunk = notificationsPerMessage / (double)chunks.Count;
@@ -122,6 +122,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                             .SetTopic(topic)
                             .SetRetain(retain)
                             .SetTtl(ttl)
+                            .SetQoS(qos)
                             .AddBuffers(chunks)
                             ;
 
@@ -187,11 +188,11 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
         /// <param name="messages"></param>
         /// <param name="isBatched"></param>
         /// <returns></returns>
-        private List<(int, PubSubMessage, string, bool, TimeSpan, Action)> GetNetworkMessages(
+        private List<(int, PubSubMessage, string, bool, TimeSpan, QoS, Action)> GetNetworkMessages(
             IEnumerable<IOpcUaSubscriptionNotification> messages, bool isBatched)
         {
             var standardsCompliant = _options.Value.UseStandardsCompliantEncoding ?? false;
-            var result = new List<(int, PubSubMessage, string, bool, TimeSpan, Action)>();
+            var result = new List<(int, PubSubMessage, string, bool, TimeSpan, QoS, Action)>();
             // Group messages by publisher, then writer group and then by dataset class id
             foreach (var topics in messages
                 .Select(m => (Notification: m, Context: (m.Context as WriterGroupMessageContext)!))
@@ -212,6 +213,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                             continue;
                         }
                         var encoding = writerGroup.MessageType ?? MessageEncoding.Json;
+                        var qos = writerGroup.QoS ?? _options.Value.DefaultQualityOfService ?? QoS.AtLeastOnce;
                         var messageMask = writerGroup.MessageSettings.NetworkMessageContentMask;
                         var hasSamplesPayload = (messageMask & NetworkMessageContentMask.MonitoredItemMessage) != 0;
                         if (hasSamplesPayload && !isBatched)
@@ -258,8 +260,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                                             ? new JsonDataSetMessage
                                             {
                                                 UseCompatibilityMode = !standardsCompliant,
-                                                DataSetWriterName = Context.Writer.DataSetWriterName
-                                                    ?? Constants.DefaultDataSetWriterName
+                                                DataSetWriterName = GetDataSetWriterName(Notification, Context)
                                             }
                                             : new UadpDataSetMessage();
 
@@ -303,8 +304,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                                                 ? new JsonDataSetMessage
                                                 {
                                                     UseCompatibilityMode = !standardsCompliant,
-                                                    DataSetWriterName = Context.Writer.DataSetWriterName
-                                                        ?? Constants.DefaultDataSetWriterName
+                                                    DataSetWriterName = GetDataSetWriterName(Notification, Context)
                                                 }
                                                 : new UadpDataSetMessage();
 
@@ -395,7 +395,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                                             _options.Value.DefaultMaxDataSetMessagesPerPublish;
                                         if (maxMessagesToPublish != null && currentMessage.Messages.Count >= maxMessagesToPublish)
                                         {
-                                            result.Add((currentNotifications.Count, currentMessage, topic, false, default,
+                                            result.Add((currentNotifications.Count, currentMessage, topic, false, default, qos,
                                                 () => currentNotifications.ForEach(n => n.Dispose())));
 #if DEBUG
                                             currentNotifications.ForEach(n => n.MarkProcessed());
@@ -411,7 +411,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                                     if (currentMessage.Messages.Count > 0)
                                     {
                                         // Start a new message but first emit current
-                                        result.Add((currentNotifications.Count, currentMessage, topic, false, default,
+                                        result.Add((currentNotifications.Count, currentMessage, topic, false, default, qos,
                                             () => currentNotifications.ForEach(n => n.Dispose())));
 #if DEBUG
                                         currentNotifications.ForEach(n => n.MarkProcessed());
@@ -428,7 +428,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                                             DataSetWriterId = Notification.SubscriptionId,
                                             MetaData = Notification.MetaData,
                                             MessageId = Guid.NewGuid().ToString(),
-                                            DataSetWriterName = Context.Writer.DataSetWriterName ?? Constants.DefaultDataSetWriterName
+                                            DataSetWriterName = GetDataSetWriterName(Notification, Context)
                                         } : new UadpMetaDataMessage
                                         {
                                             DataSetWriterId = Notification.SubscriptionId,
@@ -438,7 +438,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                                     metadataMessage.DataSetWriterGroup = writerGroup.WriterGroupId ?? Constants.DefaultWriterGroupId;
 
                                     result.Add((0, metadataMessage, Context.MetaDataTopic, true,
-                                        Context.Writer.MetaDataUpdateTime ?? default, Notification.Dispose));
+                                        Context.Writer.MetaDataUpdateTime ?? default, QoS.AtLeastOnce, Notification.Dispose));
 #if DEBUG
                                     Notification.MarkProcessed();
 #endif
@@ -446,7 +446,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                             }
                             if (currentMessage.Messages.Count > 0)
                             {
-                                result.Add((currentNotifications.Count, currentMessage, topic, false, default,
+                                result.Add((currentNotifications.Count, currentMessage, topic, false, default, qos,
                                     () => currentNotifications.ForEach(n => n.Dispose())));
 #if DEBUG
                                 currentNotifications.ForEach(n => n.MarkProcessed());
@@ -480,6 +480,18 @@ namespace Azure.IIoT.OpcUa.Publisher.Services
                                 currentMessage.DataSetClassId = dataSetClassId;
                                 currentMessage.DataSetWriterGroup = writerGroup.WriterGroupId ?? Constants.DefaultWriterGroupId;
                                 return currentMessage;
+                            }
+
+                            static string GetDataSetWriterName(IOpcUaSubscriptionNotification Notification,
+                                WriterGroupMessageContext Context)
+                            {
+                                var dataSetWriterName = Context.Writer.DataSetWriterName ?? Constants.DefaultDataSetWriterName;
+                                var dataSetName = Notification.DataSetName;
+                                if (dataSetName != null)
+                                {
+                                    return dataSetWriterName + "|" + dataSetName;
+                                }
+                                return dataSetWriterName;
                             }
 
                             DateTime? GetTimestamp(IOpcUaSubscriptionNotification Notification)

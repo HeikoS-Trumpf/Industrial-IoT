@@ -66,7 +66,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Stack.Runtime
         public const string BadMonitoredItemRetryDelayKey = "BadMonitoredItemRetryDelay";
         public const string SubscriptionManagementIntervalKey = "SubscriptionManagementInterval";
         public const string LingerTimeoutKey = "LingerTimeout";
-        public const string CertificateStorePasswordKey = "CertificateStorePassword";
+        public const string ApplicationCertificatePasswordKey = "ApplicationCertificatePassword";
         public const string ReverseConnectPortKey = "ReverseConnectPort";
         public const string DisableComplexTypePreloadingKey = "DisableComplexTypePreloading";
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
@@ -202,7 +202,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Stack.Runtime
             if (options.SubscriptionErrorRetryDelay == null)
             {
                 var retryTimeout = GetIntOrDefault(SubscriptionErrorRetryDelayKey);
-                if (retryTimeout > 0)
+                if (retryTimeout >= 0)
                 {
                     options.SubscriptionErrorRetryDelay = TimeSpan.FromSeconds(retryTimeout);
                 }
@@ -211,7 +211,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Stack.Runtime
             if (options.BadMonitoredItemRetryDelay == null)
             {
                 var retryTimeout = GetIntOrDefault(BadMonitoredItemRetryDelayKey);
-                if (retryTimeout > 0)
+                if (retryTimeout >= 0)
                 {
                     options.BadMonitoredItemRetryDelay = TimeSpan.FromSeconds(retryTimeout);
                 }
@@ -220,7 +220,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Stack.Runtime
             if (options.InvalidMonitoredItemRetryDelay == null)
             {
                 var retryTimeout = GetIntOrDefault(InvalidMonitoredItemRetryDelayKey);
-                if (retryTimeout > 0)
+                if (retryTimeout >= 0)
                 {
                     options.InvalidMonitoredItemRetryDelay = TimeSpan.FromSeconds(retryTimeout);
                 }
@@ -385,7 +385,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Stack.Runtime
                 options.Security.TrustedUserCertificates = new()
                 {
                     StorePath = GetStringOrDefault(TrustedUserCertificatesPathKey,
-                        $"{options.Security.PkiRootPath}/users"),
+                        $"{options.Security.PkiRootPath}/user"),
                     StoreType = GetStringOrDefault(TrustedUserCertificatesTypeKey,
                         CertificateStoreType.Directory)
                 };
@@ -407,7 +407,7 @@ namespace Azure.IIoT.OpcUa.Publisher.Stack.Runtime
                 options.Security.HttpsIssuerCertificates = new()
                 {
                     StorePath = GetStringOrDefault(HttpsIssuerCertificatesPathKey,
-                        $"{options.Security.PkiRootPath}/https/issuers"),
+                        $"{options.Security.PkiRootPath}/https/issuer"),
                     StoreType = GetStringOrDefault(HttpsIssuerCertificatesTypeKey,
                         CertificateStoreType.Directory)
                 };
@@ -418,16 +418,16 @@ namespace Azure.IIoT.OpcUa.Publisher.Stack.Runtime
                 options.Security.UserIssuerCertificates = new()
                 {
                     StorePath = GetStringOrDefault(UserIssuerCertificatesPathKey,
-                        $"{options.Security.PkiRootPath}/users/issuers"),
+                        $"{options.Security.PkiRootPath}/user/issuer"),
                     StoreType = GetStringOrDefault(UserIssuerCertificatesTypeKey,
                         CertificateStoreType.Directory)
                 };
             }
 
-            if (options.Security.CertificateStorePassword == null)
+            if (options.Security.ApplicationCertificatePassword == null)
             {
-                options.Security.CertificateStorePassword =
-                    GetStringOrDefault(CertificateStorePasswordKey);
+                options.Security.ApplicationCertificatePassword =
+                    GetStringOrDefault(ApplicationCertificatePasswordKey);
             }
         }
 
